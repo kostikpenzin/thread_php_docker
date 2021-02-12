@@ -54,6 +54,6 @@ do {
   //join thread
   $threads[$i]->join();
 
-} while($i < 50);
+} while($i < 5);
 
 echo "threads already finished executing. Nothing to join now.\n";
