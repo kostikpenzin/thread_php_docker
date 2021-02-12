@@ -1,59 +1,72 @@
 <?php
 
-class MultiThreadExample extends Thread {
+class MyTask extends Threaded 
+{
+    private $m_inputs;
+    private $m_outputs;
 
-  private $threadId;
-  public $data;
 
-  public function __construct(int $id) {
+    public function __construct(array $inputs)
+    {
+        $this->m_inputs = $inputs;
+        $this->m_outputs = new Threaded(); // we will store the results in here.
+    }
 
-    $this->threadId = $id;
-    $this->data = $id . ":" . date('H:i:s');
-  }
 
-  public function run() {
+    public function run() 
+    {
+        foreach ($this->m_inputs as $input)
+        {
+            // casting the array to an array is not a mistake
+            // but actually super important for this to work
+            // https://github.com/krakjoe/pthreads/issues/813#issuecomment-361955116
+            $this->m_outputs[] = (array)array(
+                'property1' => $input * 2,
+                'property2' => ($input + 2),
+            );
+        }
+    }
 
-    //thread started
-    echo 'thread ' . $this->threadId . "  started.\n";
 
-    //sleep for <threadId> seconds
-    sleep($this->threadId);
-
-    //thread ended with timestamp
-    echo 'thread ' . $this->threadId . " ended at " . date('H:i:s') . "\n";
-  }
+    # Accessors
+    public function getResults() { return $this->m_outputs; }
 }
- 
-$threads = [];
-$i = 0;
-do {
 
-  $i++;
 
-  $threads[$i] = new MultiThreadExample($i);
 
-  //start thread job
-  $threads[$i]->start();
+function main()
+{
+    $inputs = range(0,10000);
+    $numInputsPerTask = 20;
+    $inputGroups = array_chunk($inputs, $numInputsPerTask);
+    $numCpus = 4; // I would nomrally dynamically fetch this and sometimes large (e.g. aws C5 instances)
+    $numTasks = count($inputGroups);
+    $numThreads = min($numTasks, $numCpus); // don't need to spawn more threads than tasks.
+    $pool = new Pool($numThreads);
+    $tasks = array(); // collection to hold all the tasks to get the results from afterwards.
 
-  //echo thread data
-  echo $threads[$i]->data . "\n";
+    foreach ($inputGroups as $inputsForTask)
+    {
+        $task = new MyTask($inputsForTask);
+        $tasks[] = $task;
+        $pool->submit($task);
+    }
 
-} while($i < 5);
 
-echo "sleeping for 5 seconds... \n";
+    while ($pool->collect());
 
-sleep(5);
+    # We could submit more stuff here, the Pool is still waiting for work to be submitted.
 
-echo "now attempting to join...\n";
+    $pool->shutdown();
 
-$i = 0;
-do {
+    # All tasks should have been completed at this point. Get the results!
+    $results = array();
+    foreach ($tasks as $task)
+    {
+        $results[] = $task->getResults();
+    }
 
-  $i++;
+    print "results: " . print_r($results, true);
+}
 
-  //join thread
-  $threads[$i]->join();
-
-} while($i < 5);
-
-echo "threads already finished executing. Nothing to join now.\n";
+main();
