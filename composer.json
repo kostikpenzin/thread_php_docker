@@ -1,0 +1,15 @@
+{
+    "name": "baryshev1983/process-leads",
+    "type": "project",
+    "authors": [
+        {
+            "name": "Vladimir Baryshev",
+            "email": "baryshev1983@yandex.ru"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {
+        "vladimir163/lead-generator": "dev-master",
+        "ext-pthreads": "^3.2"
+    }
+}
